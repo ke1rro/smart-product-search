@@ -105,7 +105,7 @@ inventing data or results.
 1. Inspect relevant code and configuration before making changes. Follow existing project conventions.
 2. Make the smallest coherent change that solves the task. Avoid unrelated refactoring and unnecessary abstractions.
 3. Use `uv` exclusively for Python environments and dependency management. Run project commands through `uv run`.
-4. Update `pyproject.toml` and `uv.lock` together when changing dependencies.
+4. Add other dependencies when needed for the current task. Keep additions minimal and justified, and update `pyproject.toml` and `uv.lock` together when changing dependencies.
 5. Run relevant tests and quality checks after modifications. Never claim a check passed unless it was executed.
 6. Report changes, verification results, and remaining issues concisely.
 7. Never stage, commit, push, or create branches unless explicitly requested.
