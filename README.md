@@ -5,10 +5,12 @@ historical Amazon ESCI catalog. The intended pipeline combines SQLite FTS5/BM25
 retrieval, local MiniLM reranking, and OpenRouter ESCI classification to distinguish
 exact matches, alternatives, and accessories.
 
-**Current status: Iteration 2.** The full catalog is searchable using SQLite FTS5
-and BM25, with a minimal Streamlit result list. Data preparation and validation
-remain available. Semantic reranking, LLM calls, ESCI predictions, and the final
-product UI are not implemented. Data and indexes remain local and excluded from Git.
+**Current status: Iteration 3.** The complete 482,105-product catalog is searchable
+using SQLite FTS5/BM25 followed by local MiniLM semantic reranking. The minimal
+Streamlit interface defaults to semantic search and offers BM25-only inspection.
+Data preparation and validation remain available. LLM calls, ESCI predictions, and
+the final product UI belong to later iterations. Data and indexes remain local
+and excluded from Git.
 
 ## Project specifications
 
@@ -16,6 +18,7 @@ product UI are not implemented. Data and indexes remain local and excluded from 
 - [Dataset source, setup, and data contracts](docs/DATA_SETUP.md)
 - [Preparation process, measured statistics, and limitations](docs/DATA_PREPARATION.md)
 - [Lexical retrieval, ranking, UI, and evaluation protocol](docs/RETRIEVAL.md)
+- [Semantic reranking, cache, configuration, and measured validation](docs/SEMANTIC_RERANKING.md)
 - [Implementation iterations and acceptance gates](docs/IMPLEMENTATION_PLAN.md)
 - [Engineering and assignment conventions](AGENTS.md)
 
@@ -33,7 +36,8 @@ required for data preparation. Run project commands through `uv run`.
 
 Runtime dependencies are `python-decouple` for environment settings,
 `huggingface-hub` for pinned downloads, `polars` for native Parquet processing,
-and `streamlit` for the minimal UI. SQLite FTS5 comes from Python's SQLite build.
+`sentence-transformers` and `torch` for local CPU inference, `numpy` for vector
+scoring, and `streamlit` for the minimal UI. SQLite FTS5 comes from Python's SQLite build.
 The project is installed as an editable package so scripts can import its source.
 Development tools are Black, isort, Flake8, ty, pytest, pre-commit, and
 mdformat with its configured plugins. Add other dependencies only in the iteration
@@ -50,11 +54,11 @@ load models, or contact an API.
 | Key                  | Default                                    | Meaning                                                                |
 | -------------------- | ------------------------------------------ | ---------------------------------------------------------------------- |
 | `data_dir`           | `"data"`                                   | Root for raw and prepared data                                         |
-| `index_path`         | `"data/index/products.sqlite3"`            | Planned SQLite index file                                              |
+| `index_path`         | `"data/index/products.sqlite3"`            | Complete SQLite product index                                          |
 | `retrieval_k`        | `100`                                      | Maximum BM25 candidates                                                |
-| `rerank_k`           | `50`                                       | Maximum lexical candidates to rerank                                   |
+| `rerank_k`           | `50`                                       | Maximum semantic results returned                                      |
 | `classify_k`         | `10`                                       | Maximum reranked candidates to classify                                |
-| `embedding_model`    | `"sentence-transformers/all-MiniLM-L6-v2"` | Planned local embedding model                                          |
+| `embedding_model`    | `"sentence-transformers/all-MiniLM-L6-v2"` | Local pretrained embedding model                                       |
 | `llm_model`          | `""`                                       | Unselected until a compatible free endpoint is verified in Iteration 4 |
 | `openrouter_api_key` | `""`                                       | Environment-only secret, never a TOML field                            |
 
@@ -63,6 +67,10 @@ Candidate counts must be positive integers with
 blank. Relative storage paths resolve from the repository root regardless of the
 current working directory; absolute paths are preserved. `index_path` is independent
 of `data_dir`, so adjust both when relocating storage.
+
+The [semantic configuration reference](docs/SEMANTIC_RERANKING.md#central-model-configuration)
+documents the pinned model revision, CPU device, batch size, text/sequence limits,
+thread count, and bounded product-vector cache. No API key is needed for search.
 
 When API configuration becomes needed, copy `.env.example` to `.env` and fill
 `OPENROUTER_API_KEY`. Optionally set `OPENROUTER_MODEL` to override `llm_model`.
@@ -155,8 +163,19 @@ uv run streamlit run app/main.py
 The builder verifies catalog provenance and indexes all 482,105 unique products.
 It rebuilds atomically and records its counts/checksum/settings in
 `.artifacts/iteration-2/index-build.json`. The page displays real, unclassified
-lexical candidates from `data/index/products.sqlite3`; it does not parse dataset
-files on page load. An existing SQLite build with FTS5 support is required.
+products from `data/index/products.sqlite3`; it does not parse dataset files on
+page load. An existing SQLite build with FTS5 support is required.
+
+Semantic mode retrieves the original top 100 BM25 candidates, ranks them by
+normalized MiniLM cosine similarity, and returns up to 50. The page displays the
+first 20 results with semantic scores; BM25 scores remain available through the
+debug checkbox. Switch to BM25 only to preserve the lexical ordering without
+initializing the model. The first semantic search downloads the pinned weights
+through Sentence Transformers; subsequent loads reuse the Hugging Face cache.
+
+The unified API is `search_products(query, mode="semantic")` from
+`smart_product_search.search`, with `mode="bm25"` for lexical retrieval. Original
+metadata and BM25 scores are preserved; semantic scores are separate fields.
 
 For code, call `retrieve_products(query, k=100)` from
 `smart_product_search.retrieval`, optionally supplying `index_path=Path(...)`.
@@ -175,15 +194,25 @@ for E, S, and E-or-S, plus actual API latency. These are sampled known-judgment
 coverage measurements, not guaranteed corpus-wide recall. No parameter tuning,
 model comparison, or ablation is performed.
 
-Semantic reranking, remote model calls, ESCI grouping, and the final shopping UX
-remain unavailable until their authorized iterations. No API key is required for
-lexical retrieval or its evaluation.
+```bash
+uv run python scripts/evaluate_semantic.py
+uv run python scripts/smoke_semantic.py
+```
+
+The paired semantic evaluation requires the unchanged Iteration 2 selection and
+baseline artifacts. It reuses those 200 queries and records coverage at K=10/50,
+conditional judged-pool nDCG@10, CPU latency, and cache counts under
+`.artifacts/evaluations/semantic/`. The real-model smoke command checks three
+queries, original product identities, normalized vectors, repeated ordering, and
+cache reuse. Ordinary unit tests use controlled embeddings and need no downloads.
+See [the protocol, measured results, and limitations](docs/SEMANTIC_RERANKING.md).
+Remote model calls, ESCI grouping, and the final shopping UX remain later work.
 
 ## Repository layout
 
-- `app/main.py`: minimal local lexical search UI.
-- `src/smart_product_search/`: settings, preparation/audit, lexical retrieval and evaluation.
-- `scripts/`: data pipeline, complete index construction, and retrieval evaluation commands.
+- `app/main.py`: minimal local semantic/BM25 search UI.
+- `src/smart_product_search/`: settings, preparation/audit, retrieval, reranking, and evaluation.
+- `scripts/`: data pipeline, index construction, evaluation, and real-model smoke commands.
 - `tests/`: offline configuration/data tests plus FTS ranking, integrity, safety, metrics, and UI tests.
 - `notebooks/`: optional exploration and analysis.
 - `config/`: human-edited runtime TOML.

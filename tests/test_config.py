@@ -129,3 +129,36 @@ def test_reject_invalid_configuration(tmp_path: Path, content: str) -> None:
 
     with pytest.raises(ValueError):
         load_settings(configuration)
+
+
+def test_semantic_defaults_and_overrides(tmp_path: Path) -> None:
+    """Load centralized CPU model settings and reject incompatible sequence/cache settings."""
+    settings = load_settings()
+    assert settings.embedding_device == "cpu"
+    assert settings.embedding_revision == "1110a243fdf4706b3f48f1d95db1a4f5529b4d41"
+    assert settings.embedding_batch_size == 32
+    assert settings.embedding_cache_size == 10000
+    path = tmp_path / "search.toml"
+    path.write_text("embedding_batch_size=4\nembedding_cache_size=20\n", encoding="utf-8")
+    custom = load_settings(path)
+    assert custom.embedding_batch_size == 4
+    assert custom.embedding_cache_size == 20
+
+
+@pytest.mark.parametrize(
+    "content",
+    [
+        "embedding_batch_size=0",
+        "embedding_cache_size=-1",
+        "embedding_max_seq_length=257",
+        "embedding_threads=0",
+        "embedding_text_chars=0",
+        'embedding_revision="main"',
+    ],
+)
+def test_reject_invalid_semantic_configuration(tmp_path: Path, content: str) -> None:
+    """Reject malformed semantic runtime settings at the configuration boundary."""
+    path = tmp_path / "search.toml"
+    path.write_text(content, encoding="utf-8")
+    with pytest.raises(ValueError):
+        load_settings(path)
