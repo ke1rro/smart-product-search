@@ -10,7 +10,7 @@ check:
 	uv run black --check .
 	uv run flake8 src/ scripts/ tests/ app/
 	uv run ty check
-	uv run mdformat --check README.md notebooks/README.md
+	uv run mdformat --check README.md notebooks/README.md docs/ .agents/skills/
 
 test:
 	uv run pytest

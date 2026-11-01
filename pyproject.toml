@@ -5,7 +5,9 @@ description = "UCU NLP Assignment 1: Build an NLP System"
 requires-python = ">=3.14,<3.15"
 readme = "README.md"
 license = "MIT"
-dependencies = []
+dependencies = [
+    "python-decouple==3.8",
+]
 
 [dependency-groups]
 dev = [
@@ -46,4 +48,5 @@ include = ["src", "scripts", "tests", "app"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["src"]
 addopts = "-ra"

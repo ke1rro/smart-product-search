@@ -43,5 +43,8 @@ jobs:
       - name: ty
         run: uv run --locked --no-sync ty check
 
+      - name: pytest
+        run: uv run --locked --no-sync pytest
+
       - name: mdformat --check
         run: git ls-files -z '*.md' | xargs -0 uv run --locked --no-sync mdformat --check

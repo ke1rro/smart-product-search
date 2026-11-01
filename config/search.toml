@@ -1,0 +1,7 @@
+data_dir = "data"
+index_path = "data/index/products.sqlite3"
+retrieval_k = 100
+rerank_k = 50
+classify_k = 10
+embedding_model = "sentence-transformers/all-MiniLM-L6-v2"
+llm_model = ""

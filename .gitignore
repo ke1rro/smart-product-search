@@ -221,6 +221,12 @@ data/interim/*
 !data/interim/.gitkeep
 data/processed/*
 !data/processed/.gitkeep
+data/index/
+indexes/
+cache/
+.cache/
+evaluations/
+embeddings/
 
 # Env secrets
 .env
