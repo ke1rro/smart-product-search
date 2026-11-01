@@ -1,0 +1,49 @@
+[project]
+name = "nlp-hm"
+version = "0.1.0"
+description = "UCU NLP Assignment 1: Build an NLP System"
+requires-python = ">=3.14,<3.15"
+readme = "README.md"
+license = "MIT"
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "black==26.5.1",
+    "flake8==7.3.0",
+    "isort==8.0.1",
+    "mdformat==1.0.0",
+    "mdformat-frontmatter==2.1.2",
+    "mdformat-gfm==1.0.0",
+    "pre-commit==4.6.1",
+    "pytest==9.1.1",
+    "ty>=0.0.86",
+]
+notebooks = [
+    "black[jupyter]==26.5.1",
+    "ipykernel==7.3.0",
+    "jupyterlab>=4,<5",
+]
+
+[tool.uv]
+required-version = ">=0.13.0"
+python-preference = "only-managed"
+package = false
+
+[tool.black]
+line-length = 100
+target-version = ["py314"]
+
+[tool.isort]
+profile = "black"
+line_length = 100
+
+[tool.ty.environment]
+python-version = "3.14"
+
+[tool.ty.src]
+include = ["src", "scripts", "tests", "app"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
