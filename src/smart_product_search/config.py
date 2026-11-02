@@ -18,8 +18,8 @@ class SearchSettings:
         data_dir: Absolute directory for downloaded and prepared data.
         index_path: Absolute path to the planned SQLite search index.
         retrieval_k: Maximum lexical candidate count.
-        rerank_k: Maximum lexical candidates to rerank.
-        classify_k: Maximum reranked candidates to classify.
+        rerank_k: Maximum semantically reranked results returned.
+        classify_k: Maximum candidates from the chosen mode to classify, at most10.
         embedding_model: Pretrained embedding model identifier.
         embedding_revision: Pinned model commit SHA.
         embedding_device: Local inference device, CPU by default.
@@ -28,7 +28,14 @@ class SearchSettings:
         embedding_cache_size: Maximum on-demand product vectors held in memory.
         embedding_text_chars: Maximum bounded product text length.
         embedding_threads: Number of PyTorch CPU inference threads.
-        llm_model: OpenRouter model identifier, empty until an endpoint is verified.
+        llm_model: Explicit OpenRouter model identifier.
+        llm_timeout_seconds: Maximum HTTP request timeout.
+        llm_max_tokens: Maximum generated tokens per request.
+        llm_temperature: Low sampling temperature.
+        llm_max_retries: Maximum recoverable retries beyond the initial attempt.
+        llm_retry_backoff_seconds: Initial exponential retry delay.
+        llm_product_text_chars: Maximum metadata characters per product.
+        llm_cache_dir: Directory for validated response replay files.
         openrouter_api_key: Optional API secret excluded from representations.
     """
 
@@ -46,6 +53,13 @@ class SearchSettings:
     embedding_text_chars: int
     embedding_threads: int
     llm_model: str
+    llm_timeout_seconds: int
+    llm_max_tokens: int
+    llm_temperature: float
+    llm_max_retries: int
+    llm_retry_backoff_seconds: float
+    llm_product_text_chars: int
+    llm_cache_dir: Path
     openrouter_api_key: str = field(repr=False)
 
 
@@ -77,7 +91,14 @@ def load_settings(path: Path = PROJECT_ROOT / "config/search.toml") -> SearchSet
         "embedding_cache_size": 10000,
         "embedding_text_chars": 1200,
         "embedding_threads": 4,
-        "llm_model": "",
+        "llm_model": "nvidia/nemotron-3.5-super-vl:free",
+        "llm_timeout_seconds": 60,
+        "llm_max_tokens": 2048,
+        "llm_temperature": 0.0,
+        "llm_max_retries": 1,
+        "llm_retry_backoff_seconds": 1.0,
+        "llm_product_text_chars": 2400,
+        "llm_cache_dir": ".artifacts/classification-cache",
     }
     if "openrouter_api_key" in options:
         raise ValueError("Use OPENROUTER_API_KEY in the environment or .env, not TOML")
@@ -102,6 +123,17 @@ def load_settings(path: Path = PROJECT_ROOT / "config/search.toml") -> SearchSet
             raise ValueError(f"{name} must be positive")
     if options["embedding_max_seq_length"] > 256:
         raise ValueError("MiniLM supports at most 256 wordpieces in this pipeline")
+    if options["classify_k"] > 10:
+        raise ValueError("Classify at most 10 products in one request")
+    for name in ("llm_timeout_seconds", "llm_max_tokens", "llm_product_text_chars"):
+        if options[name] <= 0:
+            raise ValueError(f"{name} must be positive")
+    if not 0 <= options["llm_max_retries"] <= 2:
+        raise ValueError("llm_max_retries must be between 0 and 2")
+    if not 0 <= options["llm_temperature"] <= 0.3:
+        raise ValueError("llm_temperature must be between 0 and 0.3")
+    if not 0 < options["llm_retry_backoff_seconds"] <= 30:
+        raise ValueError("llm_retry_backoff_seconds must be between 0 and 30")
     if not re.fullmatch(r"[a-f0-9]{40}", options["embedding_revision"]):
         raise ValueError("embedding_revision must be a pinned 40-character commit SHA")
     settings = SearchSettings(
@@ -119,6 +151,13 @@ def load_settings(path: Path = PROJECT_ROOT / "config/search.toml") -> SearchSet
         embedding_text_chars=options["embedding_text_chars"],
         embedding_threads=options["embedding_threads"],
         llm_model=config("OPENROUTER_MODEL", default=options["llm_model"]),
+        llm_timeout_seconds=options["llm_timeout_seconds"],
+        llm_max_tokens=options["llm_max_tokens"],
+        llm_temperature=options["llm_temperature"],
+        llm_max_retries=options["llm_max_retries"],
+        llm_retry_backoff_seconds=options["llm_retry_backoff_seconds"],
+        llm_product_text_chars=options["llm_product_text_chars"],
+        llm_cache_dir=PROJECT_ROOT / options["llm_cache_dir"],
         openrouter_api_key=config("OPENROUTER_API_KEY", default=""),
     )
     logger.debug("Loaded search configuration from %s", path)

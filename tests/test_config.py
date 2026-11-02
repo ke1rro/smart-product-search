@@ -25,7 +25,7 @@ def test_load_project_configuration_without_credentials(monkeypatch: pytest.Monk
     assert settings.index_path == PROJECT_ROOT / "data/index/products.sqlite3"
     assert (settings.retrieval_k, settings.rerank_k, settings.classify_k) == (100, 50, 10)
     assert settings.embedding_model == "sentence-transformers/all-MiniLM-L6-v2"
-    assert settings.llm_model == ""
+    assert settings.llm_model == "nvidia/nemotron-3.5-super-vl:free"
     assert settings.openrouter_api_key == ""
 
 
@@ -41,6 +41,7 @@ def test_resolve_defaults_independently_of_working_directory(
 
     assert settings.data_dir == PROJECT_ROOT / "data"
     assert settings.index_path == PROJECT_ROOT / "data/index/products.sqlite3"
+    assert settings.llm_model == "nvidia/nemotron-3.5-super-vl:free"
     assert not (tmp_path / "data").exists()
 
 
@@ -160,5 +161,35 @@ def test_reject_invalid_semantic_configuration(tmp_path: Path, content: str) -> 
     """Reject malformed semantic runtime settings at the configuration boundary."""
     path = tmp_path / "search.toml"
     path.write_text(content, encoding="utf-8")
+    with pytest.raises(ValueError):
+        load_settings(path)
+
+
+def test_classification_defaults() -> None:
+    """Use the requested free model and bounded inference/cache settings."""
+    settings = load_settings()
+    assert settings.llm_model == "nvidia/nemotron-3.5-super-vl:free"
+    assert settings.llm_timeout_seconds == 60
+    assert settings.llm_max_tokens == 2048
+    assert settings.llm_temperature == 0.0
+    assert settings.llm_max_retries == 1
+    assert settings.llm_cache_dir == PROJECT_ROOT / ".artifacts/classification-cache"
+
+
+@pytest.mark.parametrize(
+    "content",
+    [
+        "llm_timeout_seconds = 0",
+        "llm_max_tokens = 0",
+        "llm_temperature = -1.0",
+        "llm_max_retries = 3",
+        "classify_k = 11",
+        "llm_product_text_chars = 0",
+    ],
+)
+def test_reject_invalid_classification_settings(tmp_path: Path, content: str) -> None:
+    """Reject unsafe or unbounded inference settings at the configuration boundary."""
+    path = tmp_path / "settings.toml"
+    path.write_text(content)
     with pytest.raises(ValueError):
         load_settings(path)
