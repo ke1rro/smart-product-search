@@ -33,11 +33,11 @@ def main() -> None:
         candidates = retrieve_products(query, index_path=settings.index_path)
         before = reranker.cache_info()
         started = time.perf_counter()
-        first = search_products(query, settings=settings)
+        first = search_products(query, mode="semantic", settings=settings)
         first_seconds = time.perf_counter() - started
         middle = reranker.cache_info()
         started = time.perf_counter()
-        second = search_products(query, settings=settings)
+        second = search_products(query, mode="semantic", settings=settings)
         repeat_seconds = time.perf_counter() - started
         after = reranker.cache_info()
         first_ids = [product.product_id for product in first]

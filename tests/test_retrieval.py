@@ -184,11 +184,11 @@ def test_ui_searches_real_index_and_handles_empty_input(
     monkeypatch.setattr("smart_product_search.config.load_settings", lambda: settings)
     app = AppTest.from_file(PROJECT_ROOT / "app/main.py").run()
     assert len(app.exception) == 0
-    app.selectbox[0].set_value("BM25 only")
+    app.selectbox[0].set_value("BM25")
     app.text_input[0].set_value("UniqueNullDescription")
     app.button[0].click().run()
     assert len(app.exception) == 0
-    assert any("UniqueNullDescription headset" in element.value for element in app.text)
+    assert any("UniqueNullDescription headset" in element.value for element in app.markdown)
     assert any("No description available" in element.value for element in app.caption)
     app.text_input[0].set_value("")
     app.button[0].click().run()

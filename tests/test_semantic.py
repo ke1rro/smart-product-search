@@ -213,7 +213,7 @@ def test_search_modes_preserve_bm25_and_do_not_duplicate_retrieval(semantic_inde
     assert [item.bm25_score for item in lexical] == [item.bm25_score for item in original]
     assert all(item.semantic_score is None for item in lexical)
     assert ControlledEncoder.loads == 0
-    semantic = search_products("audio garden", settings=settings)
+    semantic = search_products("audio garden", mode="semantic", settings=settings)
     assert [item.product_id for item in semantic] == ["A", "B"]
     assert [item.semantic_score for item in semantic] == [1, 0]
     assert {item.product_id for item in semantic} == {item.product_id for item in original}
@@ -229,22 +229,24 @@ def test_empty_search_does_not_initialize_model(tmp_path: Path) -> None:
         search_products("x" * 1001, settings=settings)
 
 
-def test_semantic_ui_is_default_and_reuses_model(
+def test_semantic_ui_mode_reuses_model(
     semantic_index: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Default to semantic results and reuse one model/cache across Streamlit reruns."""
+    """Keep semantic results and reuse one model/cache across Streamlit reruns."""
     settings = replace(load_settings(), index_path=semantic_index)
     monkeypatch.setattr("smart_product_search.config.load_settings", lambda: settings)
     app = AppTest.from_file(PROJECT_ROOT / "app/main.py").run()
-    assert app.selectbox[0].value == "Semantic reranking"
+    assert app.selectbox[0].value == "BM25"
+    app.selectbox[0].set_value("Semantic")
     app.text_input[0].set_value("audio garden")
     app.button[0].click().run()
     assert len(app.exception) == 0
+    app.checkbox[0].set_value(True).run()
     assert any("Cosine similarity" in element.value for element in app.caption)
     app.button[0].click().run()
     assert ControlledEncoder.loads == 1
     assert get_reranker(settings).cache_info()["products_encoded"] == 2
-    app.selectbox[0].set_value("BM25 only")
+    app.selectbox[0].set_value("BM25")
     app.button[0].click().run()
     assert len(app.exception) == 0
     assert ControlledEncoder.loads == 1
@@ -264,11 +266,12 @@ def test_semantic_ui_surfaces_model_transport_failure(
 
     monkeypatch.setattr("smart_product_search.search.get_reranker", fail_loading)
     app = AppTest.from_file(PROJECT_ROOT / "app/main.py").run()
+    app.selectbox[0].set_value("Semantic")
     app.text_input[0].set_value("audio garden")
     app.button[0].click().run()
     assert not app.exception
     assert "Model download interrupted" in app.error[0].value
-    app.selectbox[0].set_value("BM25 only")
+    app.selectbox[0].set_value("BM25")
     app.button[0].click().run()
     assert not app.exception and not app.error
     assert any("Product ID:" in element.value for element in app.text)

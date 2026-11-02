@@ -6,13 +6,13 @@ from smart_product_search.semantic import RankedProduct, get_reranker
 
 
 def search_products(
-    query: str | None, *, mode: str = "semantic", settings: SearchSettings | None = None
+    query: str | None, *, mode: str = "bm25", settings: SearchSettings | None = None
 ) -> list[RankedProduct]:
     """Use the existing lexical retrieval once, optionally reranking its candidates semantically.
 
     Args:
         query: Original English shopping text using the existing validation/empty-input contract.
-        mode: Semantic reranking by default, or bm25 for the unchanged lexical ordering.
+        mode: bm25 by default, or semantic for optional local reranking.
         settings: Optional explicit configuration, otherwise read config/search.toml.
 
     Returns:

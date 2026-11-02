@@ -1,5 +1,10 @@
 # Iteration 3: local semantic reranking
 
+Iteration4 now defaults the unified API and UI to BM25, preserving this optional
+semantic ranking logic. See [classification](CLASSIFICATION.md) for the new explicit
+LLM action and [the product UI](USER_INTERFACE.md) for the current interaction.
+Measurements below remain the original Iteration3 results.
+
 The current Iteration 3 contract is BM25 top 100, descending MiniLM cosine ranking,
 and top 50 output. It supersedes the earlier plan's 50-candidate/RRF/top 10 sketch.
 The existing BM25 implementation and complete 482,105-product SQLite index remain
@@ -92,7 +97,7 @@ contract and code. The unified interface is:
 ```python
 from smart_product_search.search import search_products
 
-semantic_results = search_products("wireless noise cancelling headphones")
+semantic_results = search_products("wireless noise cancelling headphones", mode="semantic")
 lexical_results = search_products("wireless noise cancelling headphones", mode="bm25")
 ```
 
@@ -140,9 +145,8 @@ products, and encoded queries. Verification distinguishes cache misses from the
 number of candidates considered. These are implementation counters, not quality
 scores.
 
-Streamlit defaults to Semantic reranking, offers BM25 only, preserves the existing
-form and plain-text cards, displays cosine for semantic results, and keeps BM25
-scores behind the existing debug checkbox. The Python process factory persists
+Streamlit offers **Semantic** and default **BM25**, with both cosine and BM25
+scores behind **Search details → Show retrieval scores**. The Python process factory persists
 across script reruns. Model failure is surfaced honestly; users can explicitly
 choose BM25-only mode rather than receiving a silent substituted result.
 

@@ -1,16 +1,18 @@
 # Smart Product Search
 
-UCU NLP Assignment 1: an English product discovery prototype planned around a
-historical Amazon ESCI catalog. The intended pipeline combines SQLite FTS5/BM25
+UCU NLP Assignment 1: an English product discovery prototype using a
+historical Amazon ESCI catalog. The pipeline combines SQLite FTS5/BM25
 retrieval, local MiniLM reranking, and OpenRouter ESCI classification to distinguish
 exact matches, alternatives, and accessories.
 
-**Current status: Iteration 3.** The complete 482,105-product catalog is searchable
-using SQLite FTS5/BM25 followed by local MiniLM semantic reranking. The minimal
-Streamlit interface defaults to semantic search and offers BM25-only inspection.
-Data preparation and validation remain available. LLM calls, ESCI predictions, and
-the final product UI belong to later iterations. Data and indexes remain local
-and excluded from Git.
+**Current status: Iteration 5.** The complete 482,105-product catalog supports BM25
+and optional local MiniLM reranking. BM25 remains the default retrieval mode.
+Explicit classification uses `nvidia/nemotron-3.5-super-vl:free`, strict validation
+and persistent cache replay. The Streamlit interface provides ranked product cards,
+explicit AI analysis, and counted groups for predicted matches, alternatives,
+complements, and other results. The fixed 199-pair held-out classification evaluation
+is measured; labels remain unverified predictions. This is a research prototype,
+not an Amazon storefront. Data, caches and indexes stay out of Git.
 
 ## Project specifications
 
@@ -19,6 +21,8 @@ and excluded from Git.
 - [Preparation process, measured statistics, and limitations](docs/DATA_PREPARATION.md)
 - [Lexical retrieval, ranking, UI, and evaluation protocol](docs/RETRIEVAL.md)
 - [Semantic reranking, cache, configuration, and measured validation](docs/SEMANTIC_RERANKING.md)
+- [ESCI classification, prompt, API/cache contracts, and evaluation](docs/CLASSIFICATION.md)
+- [Product interface, workflow, states, and UI verification](docs/USER_INTERFACE.md)
 - [Implementation iterations and acceptance gates](docs/IMPLEMENTATION_PLAN.md)
 - [Engineering and assignment conventions](AGENTS.md)
 
@@ -37,7 +41,8 @@ required for data preparation. Run project commands through `uv run`.
 Runtime dependencies are `python-decouple` for environment settings,
 `huggingface-hub` for pinned downloads, `polars` for native Parquet processing,
 `sentence-transformers` and `torch` for local CPU inference, `numpy` for vector
-scoring, and `streamlit` for the minimal UI. SQLite FTS5 comes from Python's SQLite build.
+scoring, `httpx2` for reusable HTTP connections, `pydantic` for strict LLM output
+validation, and `streamlit` for the product UI. SQLite FTS5 comes from Python's SQLite build.
 The project is installed as an editable package so scripts can import its source.
 Development tools are Black, isort, Flake8, ty, pytest, pre-commit, and
 mdformat with its configured plugins. Add other dependencies only in the iteration
@@ -51,16 +56,16 @@ custom configuration. Missing fields use the defaults below; unknown keys and
 invalid values are rejected. Loading settings does not create storage directories,
 load models, or contact an API.
 
-| Key                  | Default                                    | Meaning                                                                |
-| -------------------- | ------------------------------------------ | ---------------------------------------------------------------------- |
-| `data_dir`           | `"data"`                                   | Root for raw and prepared data                                         |
-| `index_path`         | `"data/index/products.sqlite3"`            | Complete SQLite product index                                          |
-| `retrieval_k`        | `100`                                      | Maximum BM25 candidates                                                |
-| `rerank_k`           | `50`                                       | Maximum semantic results returned                                      |
-| `classify_k`         | `10`                                       | Maximum reranked candidates to classify                                |
-| `embedding_model`    | `"sentence-transformers/all-MiniLM-L6-v2"` | Local pretrained embedding model                                       |
-| `llm_model`          | `""`                                       | Unselected until a compatible free endpoint is verified in Iteration 4 |
-| `openrouter_api_key` | `""`                                       | Environment-only secret, never a TOML field                            |
+| Key                  | Default                                    | Meaning                                                        |
+| -------------------- | ------------------------------------------ | -------------------------------------------------------------- |
+| `data_dir`           | `"data"`                                   | Root for raw and prepared data                                 |
+| `index_path`         | `"data/index/products.sqlite3"`            | Complete SQLite product index                                  |
+| `retrieval_k`        | `100`                                      | Maximum BM25 candidates                                        |
+| `rerank_k`           | `50`                                       | Maximum semantic results returned                              |
+| `classify_k`         | `10`                                       | Maximum candidates from the chosen mode to classify, at most10 |
+| `embedding_model`    | `"sentence-transformers/all-MiniLM-L6-v2"` | Local pretrained embedding model                               |
+| `llm_model`          | `"nvidia/nemotron-3.5-super-vl:free"`      | Explicit configurable OpenRouter model                         |
+| `openrouter_api_key` | `""`                                       | Environment-only secret, never a TOML field                    |
 
 Candidate counts must be positive integers with
 `classify_k <= rerank_k <= retrieval_k`. Paths and `embedding_model` must not be
@@ -71,14 +76,17 @@ of `data_dir`, so adjust both when relocating storage.
 The [semantic configuration reference](docs/SEMANTIC_RERANKING.md#central-model-configuration)
 documents the pinned model revision, CPU device, batch size, text/sequence limits,
 thread count, and bounded product-vector cache. No API key is needed for search.
+The [classification configuration reference](docs/CLASSIFICATION.md#run-and-configure)
+documents timeout, output tokens, temperature, bounded retries, text budget and
+persistent response cache settings.
 
-When API configuration becomes needed, copy `.env.example` to `.env` and fill
+For classification, copy `.env.example` to `.env` and fill
 `OPENROUTER_API_KEY`. Optionally set `OPENROUTER_MODEL` to override `llm_model`.
 Environment variables take precedence over `.env`, and either source's model value
 takes precedence over TOML. Omit `OPENROUTER_MODEL` to use TOML; an explicitly empty
 value leaves the model unselected. Settings are read through `decouple`; the secret
 is excluded from the settings representation. Never log or serialize credentials.
-No model is selected automatically, and no paid fallback is configured.
+The requested free model is the explicit TOML default; no model fallback is configured.
 
 ## Development workflow and skills
 
@@ -162,19 +170,19 @@ uv run streamlit run app/main.py
 
 The builder verifies catalog provenance and indexes all 482,105 unique products.
 It rebuilds atomically and records its counts/checksum/settings in
-`.artifacts/iteration-2/index-build.json`. The page displays real, unclassified
+`.artifacts/iteration-2/index-build.json`. The page displays real
 products from `data/index/products.sqlite3`; it does not parse dataset files on
 page load. An existing SQLite build with FTS5 support is required.
 
 Semantic mode retrieves the original top 100 BM25 candidates, ranks them by
 normalized MiniLM cosine similarity, and returns up to 50. The page displays the
-first 20 results with semantic scores; BM25 scores remain available through the
-debug checkbox. Switch to BM25 only to preserve the lexical ordering without
+first 20 results, with **Show more products** revealing the remaining saved results.
+Scores are optional under **Search details**. Select **BM25** to preserve lexical ordering without
 initializing the model. The first semantic search downloads the pinned weights
 through Sentence Transformers; subsequent loads reuse the Hugging Face cache.
 
-The unified API is `search_products(query, mode="semantic")` from
-`smart_product_search.search`, with `mode="bm25"` for lexical retrieval. Original
+The unified API is `search_products(query, mode="bm25")` from
+`smart_product_search.search`, with `mode="semantic"` for optional reranking. Original
 metadata and BM25 scores are preserved; semantic scores are separate fields.
 
 For code, call `retrieve_products(query, k=100)` from
@@ -206,12 +214,42 @@ conditional judged-pool nDCG@10, CPU latency, and cache counts under
 queries, original product identities, normalized vectors, repeated ordering, and
 cache reuse. Ordinary unit tests use controlled embeddings and need no downloads.
 See [the protocol, measured results, and limitations](docs/SEMANTIC_RERANKING.md).
-Remote model calls, ESCI grouping, and the final shopping UX remain later work.
+
+## Explicit ESCI classification
+
+Search first, then click **Analyze with AI**. One JSON-mode OpenRouter
+request predicts E/S/C/I with a short metadata-grounded reason for every supplied
+ID. Predictions are unverified. The UI groups them into **Exact Matches (E)**,
+**Alternatives (S)**, **Accessories & Complements (C)**, and a collapsed
+**Other Results (I)** section. Each group shows its count and preserves retrieval
+order. Remaining products stay separately accessible as not analyzed, without an
+invented category. Ordinary reruns do not request inference. Identical successful
+requests replay the persistent cache, including offline without a key. Failure
+shows an explicit unavailable warning while retaining search results. Editing the
+query or mode clears stale analysis and requires **Search** before analyzing again.
+See [the UI workflow and limitations](docs/USER_INTERFACE.md).
+
+```bash
+uv run python scripts/evaluate_classification.py --allow-api --output-dir .artifacts/evaluations/classification/nemotron
+uv run python scripts/evaluate_classification.py --output-dir .artifacts/evaluations/classification/nemotron/replay
+```
+
+The first command explicitly permits at most 20 classification POSTs, with no
+evaluation retries. The second only replays valid cache entries. The fixed subset
+has 199 judged pairs across 20 official test queries; it evaluates classification
+separately from live retrieval. All199 pairs were classified: accuracy 53.27%,
+macro-F1 0.4653, with 100% valid responses and coverage. The run reused one
+cached batch and made 19 successful API calls. Median/p95 successful new request
+latency was 2.469/4.255 seconds. Complement has only five examples, making its
+per-class result unstable. These measurements do not establish full-catalog or
+end-to-end search relevance. Details, class metrics, baseline and exact commands
+are in [the classification document](docs/CLASSIFICATION.md) and
+`.artifacts/iteration-4/acceptance.md`. No automatic model substitution is configured.
 
 ## Repository layout
 
-- `app/main.py`: minimal local semantic/BM25 search UI.
-- `src/smart_product_search/`: settings, preparation/audit, retrieval, reranking, and evaluation.
+- `app/main.py`: product search, explicit analysis, and grouped result cards.
+- `src/smart_product_search/`: settings, data, retrieval, reranking, classification and evaluation.
 - `scripts/`: data pipeline, index construction, evaluation, and real-model smoke commands.
 - `tests/`: offline configuration/data tests plus FTS ranking, integrity, safety, metrics, and UI tests.
 - `notebooks/`: optional exploration and analysis.
