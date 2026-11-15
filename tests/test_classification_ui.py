@@ -7,7 +7,8 @@ import polars as pl
 import pytest
 from streamlit.testing.v1 import AppTest
 
-from smart_product_search.config import PROJECT_ROOT, load_settings
+from smart_product_search import config
+from smart_product_search.config import PROJECT_ROOT
 from smart_product_search.preparation import CATALOG_COLUMNS
 from smart_product_search.retrieval import build_index
 from smart_product_search.search import search_products
@@ -33,7 +34,7 @@ def app_configuration(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> list[h
     index = tmp_path / "products.sqlite3"
     build_index(catalog, index)
     settings = replace(
-        load_settings(),
+        config.load_settings(),
         index_path=index,
         llm_cache_dir=tmp_path / "cache",
         openrouter_api_key="dummy-test-key",
@@ -114,8 +115,8 @@ def test_failure_keeps_unclassified_search_results(
 
 def test_bm25_is_default_without_altering_semantic_mode(app_configuration: list) -> None:
     """Retain lexical scores and never require a model or API for the new default."""
-    settings = load_settings()
-    assert search_products("headphones", settings=settings) == search_products(
-        "headphones", mode="bm25", settings=settings
-    )
+    settings = config.load_settings()
+    products = search_products("headphones", settings=settings)
+    assert [product.product_id for product in products] == ["A"]
+    assert products == search_products("headphones", mode="bm25", settings=settings)
     assert app_configuration == []

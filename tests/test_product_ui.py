@@ -13,9 +13,12 @@ from smart_product_search.semantic import RankedProduct
 @pytest.fixture
 def ui_backend(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict:
     """Control backend inputs and HTTP while exercising real classification/cache/UI behavior."""
+    index_path = tmp_path / "products.sqlite3"
+    index_path.touch()
     state: dict = {
         "settings": replace(
             load_settings(),
+            index_path=index_path,
             llm_cache_dir=tmp_path / "cache",
             openrouter_api_key="unit-only-key",
             llm_max_retries=0,
