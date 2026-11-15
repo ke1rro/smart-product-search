@@ -1,0 +1,177 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="drawio" version="26.0.0">
+  <diagram name="Architecture">
+    <mxGraphModel dx="1400" dy="800" grid="1" gridSize="10" page="1" pageWidth="1400" pageHeight="800">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="lane_offline" value="Offline data preparation" style="swimlane;startSize=30;html=1;align=left;spacingLeft=10;fontStyle=1;fillColor=#f5f5f5;strokeColor=#666666;swimlaneFillColor=#fafafa;" vertex="1" parent="1">
+          <mxGeometry x="40" y="40" width="1320" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="snapshot" value="Amazon ESCI&#xa;HF snapshot" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;size=8;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="lane_offline">
+          <mxGeometry x="30" y="45" width="160" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="download" value="Download&#xa;SHA-256 verify" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="lane_offline">
+          <mxGeometry x="270" y="50" width="160" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="prepare" value="Prepare&#xa;catalog + judgments" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="lane_offline">
+          <mxGeometry x="510" y="50" width="160" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="build_index" value="Build index" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="lane_offline">
+          <mxGeometry x="750" y="50" width="160" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="index" value="SQLite FTS5&#xa;482k products" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;size=8;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="lane_offline">
+          <mxGeometry x="990" y="45" width="160" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="lane_online" value="Online search" style="swimlane;startSize=30;html=1;align=left;spacingLeft=10;fontStyle=1;fillColor=#dae8fc;strokeColor=#6c8ebf;swimlaneFillColor=#f7faff;" vertex="1" parent="1">
+          <mxGeometry x="40" y="230" width="1320" height="270" as="geometry" />
+        </mxCell>
+        <mxCell id="query" value="User query" style="rounded=1;arcSize=50;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="lane_online">
+          <mxGeometry x="30" y="70" width="160" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="ui" value="Streamlit UI" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="lane_online">
+          <mxGeometry x="270" y="70" width="160" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="bm25" value="BM25 retrieval&#xa;top 100" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="lane_online">
+          <mxGeometry x="510" y="70" width="160" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="rerank" value="MiniLM rerank&#xa;top 50" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="lane_online">
+          <mxGeometry x="750" y="70" width="160" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="results" value="Ranked product cards" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="lane_online">
+          <mxGeometry x="990" y="70" width="160" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="classify" value="ESCI classification&#xa;OpenRouter LLM · top 10" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="lane_online">
+          <mxGeometry x="990" y="180" width="160" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="cache" value="Response&#xa;cache" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;size=8;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="lane_online">
+          <mxGeometry x="1200" y="175" width="100" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="validate" value="Schema validation" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="lane_online">
+          <mxGeometry x="750" y="180" width="160" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="group" value="Group E / S / C / I" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="lane_online">
+          <mxGeometry x="510" y="180" width="160" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="lane_eval" value="Evaluation · held-out test split" style="swimlane;startSize=30;html=1;align=left;spacingLeft=10;fontStyle=1;fillColor=#fff2cc;strokeColor=#d6b656;swimlaneFillColor=#fffdf5;" vertex="1" parent="1">
+          <mxGeometry x="40" y="560" width="1320" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="eval_retrieval" value="Recall@K" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="lane_eval">
+          <mxGeometry x="510" y="45" width="160" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="eval_rerank" value="nDCG@10" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="lane_eval">
+          <mxGeometry x="750" y="45" width="160" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="eval_classify" value="Accuracy · macro-F1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="lane_eval">
+          <mxGeometry x="990" y="45" width="160" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e_snapshot_download" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endSize=8;" edge="1" parent="1" source="snapshot" target="download">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_download_prepare" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endSize=8;" edge="1" parent="1" source="download" target="prepare">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_prepare_build" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endSize=8;" edge="1" parent="1" source="prepare" target="build_index">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_build_index" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endSize=8;" edge="1" parent="1" source="build_index" target="index">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_index_bm25" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endSize=8;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="index" target="bm25">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1110" y="200" />
+              <mxPoint x="630" y="200" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_prepare_eval" value="test labels" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endSize=8;dashed=1;exitX=0.25;exitY=1;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;fontSize=11;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="prepare" target="lane_eval">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="590" y="190" />
+              <mxPoint x="10" y="190" />
+              <mxPoint x="10" y="620" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="e_query_ui" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endSize=8;" edge="1" parent="1" source="query" target="ui">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ui_bm25" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endSize=8;" edge="1" parent="1" source="ui" target="bm25">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_bm25_rerank" value="semantic" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endSize=8;dashed=1;fontSize=11;labelBackgroundColor=#f7faff;" edge="1" parent="1" source="bm25" target="rerank">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_rerank_results" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endSize=8;dashed=1;" edge="1" parent="1" source="rerank" target="results">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_bm25_results" value="default" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endSize=8;exitX=0.75;exitY=0;exitDx=0;exitDy=0;entryX=0.25;entryY=0;entryDx=0;entryDy=0;fontSize=11;labelBackgroundColor=#f7faff;" edge="1" parent="1" source="bm25" target="results">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="670" y="275" />
+              <mxPoint x="1070" y="275" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_results_classify" value="AI analysis" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endSize=8;fontSize=11;labelBackgroundColor=#f7faff;" edge="1" parent="1" source="results" target="classify">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_classify_cache" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endSize=6;startArrow=block;startSize=6;dashed=1;" edge="1" parent="1" source="classify" target="cache">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_classify_validate" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endSize=8;" edge="1" parent="1" source="classify" target="validate">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_validate_group" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endSize=8;" edge="1" parent="1" source="validate" target="group">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_group_ui" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endSize=8;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="group" target="ui">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="legend" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=none;" vertex="1" parent="1">
+          <mxGeometry x="40" y="700" width="760" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="leg_rule" value="" style="rounded=1;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="legend">
+          <mxGeometry x="0" y="7" width="28" height="16" as="geometry" />
+        </mxCell>
+        <mxCell id="leg_rule_t" value="Deterministic" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="legend">
+          <mxGeometry x="36" y="5" width="100" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="leg_model" value="" style="rounded=1;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="legend">
+          <mxGeometry x="150" y="7" width="28" height="16" as="geometry" />
+        </mxCell>
+        <mxCell id="leg_model_t" value="Model call" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="legend">
+          <mxGeometry x="186" y="5" width="90" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="leg_store" value="" style="rounded=1;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="legend">
+          <mxGeometry x="290" y="7" width="28" height="16" as="geometry" />
+        </mxCell>
+        <mxCell id="leg_store_t" value="Data store" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="legend">
+          <mxGeometry x="326" y="5" width="90" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="leg_ui" value="" style="rounded=1;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="legend">
+          <mxGeometry x="430" y="7" width="28" height="16" as="geometry" />
+        </mxCell>
+        <mxCell id="leg_ui_t" value="UI" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="legend">
+          <mxGeometry x="466" y="5" width="50" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="leg_dash" value="" style="endArrow=none;html=1;dashed=1;" edge="1" parent="legend">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="530" y="15" as="sourcePoint" />
+            <mxPoint x="560" y="15" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="leg_dash_t" value="Optional path" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="legend">
+          <mxGeometry x="568" y="5" width="100" height="20" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
