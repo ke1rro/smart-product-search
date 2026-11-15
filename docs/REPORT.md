@@ -25,8 +25,8 @@ The project follows all six CRISP-DM phases:
 | Evaluation             | Compared BM25 and Semantic on fixed queries, scored classification against held-out labels and a majority baseline, and tested UI behavior. Mixed semantic results informed the BM25 default. |
 | Deployment             | Delivered a locally runnable Streamlit application with configuration, caches, setup commands, and graceful API failure handling.                                                             |
 
-Independent human evaluation of shopping-task success and explanation factuality
-remains pending. A five-query assisted check is reported below.
+A five-query assisted assessment and metadata review were completed, followed by
+author review and acceptance of all 50 ratings. The method and limitations are below.
 
 ## 2. Dataset and preparation
 
@@ -195,8 +195,12 @@ See [classification results](CLASSIFICATION.md#measured-classification-results).
 
 I collected the top 10 products before and after AI analysis for five BM25 queries.
 Reference labels were recorded before viewing each classification response.
-The reference labels and explanation ratings were proposed with LLM assistance
-and remain subject to my review. I reduced the original plan from 10 queries to
+The reference labels and explanation ratings were proposed with LLM assistance.
+A follow-up LLM-assisted metadata review on 2026-11-15 checked all 50 products
+against the prepared catalog without changing labels or scores. I then reviewed
+and accepted all 50 ratings on the same date. Both follow-up reviews had access
+to the model predictions.
+I reduced the original plan from 10 queries to
 its first five after inspecting four cases, without replacing query texts.
 
 | Query                                     | Category agreement | Supported explanations | E/S task success | Source |
@@ -215,11 +219,12 @@ with a supported explanation. It accepts substitutes, so Q02 passes despite
 having no confirmed waterproof 35 L Exact product. Q03 returned no useful case.
 
 Errors included an unstated form-factor restriction, assumed sleeve length, and
-unsupported water protection. Two Q03 C/I decisions remain disputed. For Q05,
+unsupported water protection. Two Q03 C/I disagreements reflect the retained
+companion-item interpretation for headphones used with the requested case. For Q05,
 I accepted nominal 32oz/945ml capacity as approximately one liter before prediction.
 All five supplied batches contained 10 classifications. Four UI actions reported
 API output and one reported cache replay. HTTP attempt counts and provider latency
-were not captured. These small-sample observations await independent human calibration.
+were not captured. These observations were accepted by one author after viewing predictions.
 See the [rating protocol](MANUAL_EVALUATION.md) and
 [50 product-level ratings](manual_evaluation_ratings.csv).
 
@@ -280,14 +285,15 @@ uv run python scripts/evaluate_classification.py --output-dir .artifacts/evaluat
 The last command replays local cache only, reporting missing predictions honestly.
 Caches and secrets are excluded from Git. `--allow-api` explicitly permits bounded
 live evaluation with a valid key. See
-[README.md](../README.md#development-workflow-and-skills) for quality-check commands.
+[README.md](../README.md#tests-and-development) for quality-check commands.
 
 ## 7. Remaining limitations
 
 Metadata is incomplete, BM25 misses spelling variants, and MiniLM cannot expand
 the lexical pool. Classification is fallible and explanations lack independent
 fact-checking. The five-query assisted assessment provides preliminary workflow
-evidence, with unresolved rubric decisions and no representative human evaluation.
+evidence under documented rubric choices. Author review was not blind, and this
+small convenience sample is not representative of all shopping queries.
 Its E/S success rule does not guarantee that all original requirements are met.
 
 Provider availability and hosted models can change. An earlier local run showed
