@@ -37,6 +37,8 @@ notebooks = [
     "black[jupyter]==26.5.1",
     "ipykernel==7.3.0",
     "jupyterlab>=4,<5",
+    "kaleido>=1.5.1",
+    "plotly>=7.1.0",
 ]
 
 [tool.uv]

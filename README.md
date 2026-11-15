@@ -16,6 +16,7 @@ not an Amazon storefront. Data, caches and indexes stay out of Git.
 
 ## Project specifications
 
+- [Technical report: CRISP-DM, components, evaluation, and reproduction](docs/REPORT.md)
 - [Product requirements and technical design](docs/PROJECT_IDEA.md)
 - [Dataset source, setup, and data contracts](docs/DATA_SETUP.md)
 - [Preparation process, measured statistics, and limitations](docs/DATA_PREPARATION.md)
@@ -23,6 +24,7 @@ not an Amazon storefront. Data, caches and indexes stay out of Git.
 - [Semantic reranking, cache, configuration, and measured validation](docs/SEMANTIC_RERANKING.md)
 - [ESCI classification, prompt, API/cache contracts, and evaluation](docs/CLASSIFICATION.md)
 - [Product interface, workflow, states, and UI verification](docs/USER_INTERFACE.md)
+- [Application architecture diagram](docs/architecture.drawio.png) ([editable draw.io source](docs/architecture.drawio))
 - [Implementation iterations and acceptance gates](docs/IMPLEMENTATION_PLAN.md)
 - [Engineering and assignment conventions](AGENTS.md)
 
